@@ -1,4 +1,4 @@
-"""cloudpulse — tiny self-hosted server dashboard. Stdlib only."""
+"""cloudpulse — tiny self-hosted server dashboard. Stdlib-only core."""
 
 import argparse
 import os
@@ -11,6 +11,23 @@ R, BOLD, DIM = "\033[0m", "\033[1m", "\033[2m"
 GREEN, YELLOW, RED, CYAN = "\033[32m", "\033[33m", "\033[31m", "\033[36m"
 
 W = 64
+
+# Optional pretty output via prettyformat-utils (declared in requirements.txt).
+# Falls back to a local implementation so the core stays stdlib-only.
+try:
+    from prettyformat_utils import format_bytes as _fmt_bytes
+
+    _USING_PRETTY = True
+except ImportError:  # pragma: no cover - pre-install fallback
+
+    def _fmt_bytes(n):
+        for unit in ("B", "KB", "MB", "GB", "TB"):
+            n = float(n)
+            if abs(n) < 1024.0 or unit == "TB":
+                return ("%.1f %s" % (n, unit)).strip()
+            n /= 1024.0
+
+    _USING_PRETTY = False
 
 
 def _bar(pct, width=24):
@@ -52,13 +69,12 @@ def render():
     root = os.path.abspath(os.sep)
     disk = shutil.disk_usage(root)
     disk_pct = disk.used / disk.total * 100
-    free_gb = disk.free / 2**30
 
     out = [
         _box_top(),
         _row("cpu load", cpu_pct, "%d cores · load %.2f" % (ncpu, load1)),
         _row("memory", 58.3, "9.3 / 16.0 GB"),
-        _row("disk", disk_pct, "%.0f GB free on %s" % (free_gb, root)),
+        _row("disk", disk_pct, "%s free on %s" % (_fmt_bytes(disk.free), root)),
         "",
         "  " + BOLD + "SERVICES" + R,
         _svc("api-gateway", "healthy", "p99 12ms · 0 errors"),
@@ -67,9 +83,10 @@ def render():
         _svc("redis-cache", "healthy", "hit rate 98.1%"),
         "",
         _box_bottom(),
-        DIM + "  %s · python %s · rendered with prettyformat-utils%s" % (
+        DIM + "  %s · python %s · rendered with %s%s" % (
             time.strftime("%Y-%m-%d %H:%M:%S"),
             sys.version.split()[0],
+            "prettyformat-utils" if _USING_PRETTY else "stdlib fallback",
             R,
         ),
     ]
