@@ -13,7 +13,7 @@ test index — the index is already configured in `requirements.txt`, so just:
 
 ```bash
 python -m venv demoenv && source demoenv/bin/activate   # recommended
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 ```
 
 ## Usage
